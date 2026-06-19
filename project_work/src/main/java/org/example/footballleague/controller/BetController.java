@@ -77,6 +77,15 @@ public class BetController {
         return ResponseEntity.ok(bets);
     }
 
+    @GetMapping("/user/{userId}/pending")
+    public ResponseEntity<List<BetResponse>> getUserPendingBets(@PathVariable Long userId) {
+        List<BetResponse> bets = betRepository.findByUserId(userId).stream()
+                .filter(bet -> bet.getStatus() == org.example.footballleague.model.BetStatus.PENDING)
+                .map(BetResponse::from)
+                .toList();
+        return ResponseEntity.ok(bets);
+    }
+
     public record PlaceBetRequest(
             Long userId,
             Long matchId,
@@ -99,7 +108,9 @@ public class BetController {
             Integer predictedAwayScore,
             Double amount,
             Double odds,
-            String status
+            String status,
+            int actualHomeScore,
+            int actualAwayScore
     ) {
         public static BetResponse from(Bet bet) {
             Match match = bet.getMatch();
@@ -115,7 +126,9 @@ public class BetController {
                     bet.getPredictedAwayScore(),
                     bet.getAmount(),
                     bet.getOdds(),
-                    bet.getStatus().name()
+                    bet.getStatus().name(),
+                    match.getHomeScore(),
+                    match.getAwayScore()
             );
         }
     }

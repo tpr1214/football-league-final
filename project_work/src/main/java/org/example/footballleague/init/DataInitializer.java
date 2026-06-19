@@ -21,7 +21,7 @@ public class DataInitializer {
     private final BetRepository betRepository;
     private final LeagueService leagueService;
 
-    // בנאי שמזריק את כל הרכיבים הדרושים למחיקה ויצירה מחדש
+
     public DataInitializer(TeamRepository teamRepository,
                            MatchRepository matchRepository,
                            BetRepository betRepository,
@@ -35,24 +35,24 @@ public class DataInitializer {
     @PostConstruct
     @Transactional
     public void initData() {
-        // 1. ניקוי הדאטאבייס מהקבוצות האירופאיות הישנות בסדר הנכון (כדי למנוע שגיאות מפתחות זרים)
-        betRepository.deleteAll();   // מוחק הימורים ישנים אם קיימים
-        matchRepository.deleteAll(); // מוחק משחקים ישנים
-        teamRepository.deleteAll();  // מוחק את ברצלונה, באיירן וכו'
+
+        betRepository.deleteAll();
+        matchRepository.deleteAll(); 
+        teamRepository.deleteAll();
 
         System.out.println(">> הדאטאבייס נוקה בהצלחה משאריות קודמות!");
 
-        // 2. יצירת 8 הקבוצות הישראליות החדשות
+
         List<Team> teamsToSave = createTeams();
 
-        // שמירת הקבוצות וקבלת הרשימה המעודכנת עם ה-IDs מה-DB
+
         List<Team> savedTeams = teamRepository.saveAll(teamsToSave);
         System.out.println(">> 8 קבוצות ישראליות חדשות נשמרו בהצלחה!");
 
-        // 3. הפעלת אלגוריתם ה-Round-Robin הדינמי דרך ה-Service
+
         List<Match> generatedMatches = leagueService.generateLeagueSchedule(savedTeams);
 
-        // שמירת כל 28 משחקי העונה שנוצרו לתוך הדאטאבייס
+
         matchRepository.saveAll(generatedMatches);
         System.out.println(">> אלגוריתם רואנד-רובין הופעל בהצלחה! 28 משחקים הוכנסו ל-DB.");
     }
@@ -65,7 +65,7 @@ public class DataInitializer {
                 createTeam("ביתר ירושלים", 92),
                 createTeam("הפועל פתח תקווה", 85),
                 createTeam("מכבי נתניה", 87),
-                createTeam("בני סכנין", 85),
+                createTeam("הפועל תל אביב ", 85),
                 createTeam("עירוני קרית שמונה", 82)
         );
     }

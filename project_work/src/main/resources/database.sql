@@ -1,18 +1,16 @@
--- 1. יצירת DB (אם הוא לא קיים) ומעבר אליו
-CREATE DATABASE IF NOT EXISTS football_league_db;
-USE football_league_db;
+CREATE DATABASE IF NOT EXISTS football_league CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE football_league;
 
-
--- 2. יצירת טבלת משתמשים (Users)
 CREATE TABLE IF NOT EXISTS users (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      username VARCHAR(255) NOT NULL UNIQUE,
-                                     password VARCHAR(255) NOT NULL,
-                                     email VARCHAR(255),
-                                     role VARCHAR(50) DEFAULT 'USER'
+                                     password_hash VARCHAR(255) NOT NULL,
+                                     email VARCHAR(255) NOT NULL UNIQUE,
+                                     balance DOUBLE DEFAULT 0.0,
+                                     profile_image_url VARCHAR(255)
 );
 
--- 3. יצירת טבלת קבוצות (Teams)
+
 CREATE TABLE IF NOT EXISTS teams (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      name VARCHAR(255) NOT NULL UNIQUE,
@@ -22,8 +20,7 @@ CREATE TABLE IF NOT EXISTS teams (
                                      goals_against INT DEFAULT 0
 );
 
---  יצירת טבלת משחקים (Matches)
--- שימי לב: יש כאן מפתחות זרים (Foreign Keys) המקשרים לטבלת הקבוצות
+
 CREATE TABLE IF NOT EXISTS matches (
                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                        home_team_id BIGINT NOT NULL,
@@ -31,23 +28,26 @@ CREATE TABLE IF NOT EXISTS matches (
                                        round_number INT NOT NULL,
                                        home_score INT DEFAULT 0,
                                        away_score INT DEFAULT 0,
+                                       expected_home_score INT DEFAULT 0,
+                                       expected_away_score INT DEFAULT 0,
                                        status VARCHAR(50) DEFAULT 'PENDING',
                                        FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
                                        FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
--- 5. יצירת טבלת הימורים (Bets)
--- שימי לב: הטבלה הזו תלויה גם ב-users וגם ב-matches
+
 CREATE TABLE IF NOT EXISTS bets (
                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                     user_id BIGINT NOT NULL,
                                     match_id BIGINT NOT NULL,
-                                    predicted_outcome VARCHAR(50) NOT NULL, -- למשל: HOME_WIN, AWAY_WIN, DRAW
+                                    predicted_outcome VARCHAR(50) NOT NULL,
+                                    predicted_home_score INT,
+                                    predicted_away_score INT,
                                     amount DOUBLE NOT NULL,
                                     odds DOUBLE NOT NULL,
-                                    status VARCHAR(50) DEFAULT 'PENDING',  -- למשל: PENDING, WON, LOST
+                                    status VARCHAR(50) DEFAULT 'PENDING',
                                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                                     FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE
 );
-USE football_league;
+
 SELECT * FROM users ORDER BY id DESC;

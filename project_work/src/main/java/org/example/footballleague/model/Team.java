@@ -1,19 +1,16 @@
 package org.example.footballleague.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
-@Table(name = "teams") // מגדיר את שם הטבלה בדאטאבייס
+@Table(name = "teams")
 public class Team {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
+    @Column(unique = true, nullable = false)
     private String name;
     private int skillLevel;
     private int points = 0;
@@ -22,7 +19,7 @@ public class Team {
 
 
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 

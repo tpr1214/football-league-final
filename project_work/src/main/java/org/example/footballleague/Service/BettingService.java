@@ -24,7 +24,7 @@ public class BettingService {
         this.userRepository = userRepository;
     }
 
-    // 1. חישוב יחס הימור דינמי - שונה לקבל BetOutcome במקום String
+
     public double calculateOdds(Match match, BetOutcome predictedOutcome) {
         double homeSkill = match.getHomeTeam().getSkillLevel();
         double awaySkill = match.getAwayTeam().getSkillLevel();
@@ -32,7 +32,7 @@ public class BettingService {
 
         double probability;
 
-        // הסוויץ' עכשיו בודק ישירות את האינאם, ללא מירכאות
+
         switch (predictedOutcome) {
             case HOME_WIN:
                 probability = homeSkill / totalSkill;
@@ -65,7 +65,7 @@ public class BettingService {
         return Math.round(odds * 100.0) / 100.0;
     }
 
-    // 2. ביצוע ההימור
+
     @Transactional
     public Bet placeBet(Bet bet, User user, Match match) {
         if (match.getStatus() != MatchStatus.PENDING) {
@@ -87,10 +87,10 @@ public class BettingService {
         return betRepository.save(bet);
     }
 
-    // 3. סגירת ההימורים וחלוקת כספים בסיום משחק
+
     @Transactional
     public void settleBets(Match match) {
-        // עברנו להשתמש ב-BetOutcome במקום String
+
         BetOutcome actualOutcome;
         if (match.getHomeScore() > match.getAwayScore()) {
             actualOutcome = BetOutcome.HOME_WIN;
@@ -100,7 +100,7 @@ public class BettingService {
             actualOutcome = BetOutcome.DRAW;
         }
 
-        // שימוש בפונקציה הבטוחה יותר שמקבלת את האובייקט כולו
+
         List<Bet> matchBets = betRepository.findByMatch(match);
 
         for (Bet bet : matchBets) {

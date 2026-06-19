@@ -3,19 +3,19 @@ package org.example.footballleague.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "matches") // מגדיר את שם הטבלה בדאטאבייס
+@Table(name = "matches")
 public class Match {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // קשר לקבוצת הבית הרבה משחקים יכולים לשתף את אותה קבוצת בית
+
     @ManyToOne
     @JoinColumn(name = "home_team_id", nullable = false)
     private Team homeTeam;
 
-    // קשר לקבוצת החוץ  הרבה משחקים יכולים לשתף את אותה קבוצת חוץ
+
     @ManyToOne
     @JoinColumn(name = "away_team_id", nullable = false)
     private Team awayTeam;
@@ -24,7 +24,7 @@ public class Match {
     private int homeScore = 0;
     private int awayScore = 0;
 
-    // שמירת האינאם כמחרוזת טקסט בדאטאבייס
+
     @Enumerated(EnumType.STRING)
     private MatchStatus status = MatchStatus.PENDING;
 private int expectedHomeScore;
