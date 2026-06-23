@@ -155,7 +155,7 @@ public class SimulationEngine {
 
     private int calculateGoals(double winProbability) {
         int goals = 0;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 3; i++) {
             if (random.nextDouble() < (winProbability * 0.7)) {
                 goals++;
             }
