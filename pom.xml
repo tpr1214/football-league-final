@@ -39,9 +39,12 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+        <!-- Boot 4 modularized autoconfiguration: the starter brings the
+             spring-boot-flyway autoconfig module (which actually runs Flyway
+             before Hibernate) plus flyway-core. flyway-mysql adds MySQL 8 support. -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
