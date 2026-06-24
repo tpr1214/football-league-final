@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -63,6 +64,69 @@ class UserServiceTest {
         u.setId(id);
         u.setRole(role);
         return u;
+    }
+
+    private User registrationUser(String role) {
+        User u = user(null, role);
+        u.setUsername("new-user");
+        u.setEmail("new-user@example.com");
+        u.setPasswordHash("plain-password");
+        return u;
+    }
+
+    // ========================================================
+    // register
+    // ========================================================
+    @Nested
+    @DisplayName("register")
+    class Register {
+
+        @Test
+        @DisplayName("Normal registration saves a USER role")
+        void normalUserGetsUserRole() {
+            User request = registrationUser(null);
+            when(userRepository.findByEmail("new-user@example.com")).thenReturn(Optional.empty());
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            boolean result = userService.register(request);
+
+            assertTrue(result);
+            User saved = savedUser();
+            assertEquals("USER", saved.getRole());
+            assertEquals(1000.0, saved.getBalance(), DELTA);
+        }
+
+        @Test
+        @DisplayName("Client-supplied ADMIN role is ignored")
+        void adminRoleInjectionIsForcedToUser() {
+            User request = registrationUser("ADMIN");
+            when(userRepository.findByEmail("new-user@example.com")).thenReturn(Optional.empty());
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            boolean result = userService.register(request);
+
+            assertTrue(result);
+            assertEquals("USER", savedUser().getRole());
+        }
+
+        @Test
+        @DisplayName("Client-supplied lowercase/admin-like role is ignored")
+        void lowercaseAdminLikeRoleInjectionIsForcedToUser() {
+            User request = registrationUser("admin");
+            when(userRepository.findByEmail("new-user@example.com")).thenReturn(Optional.empty());
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            boolean result = userService.register(request);
+
+            assertTrue(result);
+            assertEquals("USER", savedUser().getRole());
+        }
+
+        private User savedUser() {
+            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            return captor.getValue();
+        }
     }
 
     // ========================================================

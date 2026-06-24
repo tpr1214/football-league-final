@@ -53,9 +53,7 @@ public class UserService {
         }
 
         user.setBalance(1000.0);
-        if (user.getRole() == null || user.getRole().isBlank()) {
-            user.setRole("USER");
-        }
+        user.setRole("USER");
 
         System.out.println("💾 Saving new user: " + user.getUsername() + " | " + user.getEmail());
         User savedUser = userRepository.save(user);
