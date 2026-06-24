@@ -13,12 +13,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,6 +29,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DataInitializerTest {
+
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     @Mock
     private TeamRepository teamRepository;
@@ -85,7 +89,9 @@ class DataInitializerTest {
         verify(matchRepository).saveAll(generatedMatches);
         verify(userRepository).findByEmail("admin@football.com");
         verify(userRepository).save(org.mockito.ArgumentMatchers.argThat(user ->
-                "admin@football.com".equals(user.getEmail()) && "ADMIN".equals(user.getRole())));
+                "admin@football.com".equals(user.getEmail())
+                        && "ADMIN".equals(user.getRole())
+                        && PASSWORD_ENCODER.matches("admin123", user.getPasswordHash())));
     }
 
     @Test

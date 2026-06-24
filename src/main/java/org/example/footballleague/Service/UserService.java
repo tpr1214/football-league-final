@@ -3,6 +3,7 @@ package org.example.footballleague.Service;
 import org.example.footballleague.model.User;
 import org.example.footballleague.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,8 @@ import java.util.UUID;
 public class UserService {
 
     public static final double DAILY_BONUS_AMOUNT = 1000.0;
+
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
     private static final Map<String, String> EXTENSION_BY_TYPE = Map.of(
@@ -54,6 +57,7 @@ public class UserService {
 
         user.setBalance(1000.0);
         user.setRole("USER");
+        user.setPasswordHash(PASSWORD_ENCODER.encode(user.getPasswordHash()));
 
         System.out.println("💾 Saving new user: " + user.getUsername() + " | " + user.getEmail());
         User savedUser = userRepository.save(user);
@@ -69,7 +73,7 @@ public class UserService {
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            if (user.getPasswordHash().equals(password)) {
+            if (password != null && user.getPasswordHash() != null && PASSWORD_ENCODER.matches(password, user.getPasswordHash())) {
                 System.out.println("✅ Login successful for user ID: " + user.getId());
                 return user;
             }

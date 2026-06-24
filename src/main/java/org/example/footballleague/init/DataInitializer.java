@@ -12,6 +12,7 @@ import org.example.footballleague.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,8 @@ import java.util.List;
 
 @Component
 public class DataInitializer {
+
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
@@ -96,7 +99,7 @@ public class DataInitializer {
         User admin = new User();
         admin.setUsername("admin");
         admin.setEmail(adminEmail);
-        admin.setPasswordHash("admin123");
+        admin.setPasswordHash(PASSWORD_ENCODER.encode("admin123"));
         admin.setBalance(1000000.0);
         admin.setRole("ADMIN");
 

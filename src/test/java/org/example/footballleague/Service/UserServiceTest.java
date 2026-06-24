@@ -12,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +22,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +45,7 @@ import static org.mockito.Mockito.when;
 class UserServiceTest {
 
     private static final double DELTA = 0.0001;
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     @Mock
     private UserRepository userRepository;
@@ -94,6 +98,9 @@ class UserServiceTest {
             User saved = savedUser();
             assertEquals("USER", saved.getRole());
             assertEquals(1000.0, saved.getBalance(), DELTA);
+            assertNotEquals("plain-password", saved.getPasswordHash());
+            assertTrue(saved.getPasswordHash().startsWith("$2"));
+            assertTrue(PASSWORD_ENCODER.matches("plain-password", saved.getPasswordHash()));
         }
 
         @Test
@@ -126,6 +133,40 @@ class UserServiceTest {
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
             return captor.getValue();
+        }
+    }
+
+    // ========================================================
+    // login
+    // ========================================================
+    @Nested
+    @DisplayName("login")
+    class Login {
+
+        @Test
+        @DisplayName("Correct raw password matches the stored BCrypt hash")
+        void correctPasswordSucceeds() {
+            User stored = registrationUser("USER");
+            stored.setId(10L);
+            stored.setPasswordHash(PASSWORD_ENCODER.encode("plain-password"));
+            when(userRepository.findByEmail("new-user@example.com")).thenReturn(Optional.of(stored));
+
+            User result = userService.login("new-user@example.com", "plain-password");
+
+            assertSame(stored, result);
+        }
+
+        @Test
+        @DisplayName("Wrong raw password does not match the stored BCrypt hash")
+        void wrongPasswordFails() {
+            User stored = registrationUser("USER");
+            stored.setId(10L);
+            stored.setPasswordHash(PASSWORD_ENCODER.encode("plain-password"));
+            when(userRepository.findByEmail("new-user@example.com")).thenReturn(Optional.of(stored));
+
+            User result = userService.login("new-user@example.com", "wrong-password");
+
+            assertNull(result);
         }
     }
 
