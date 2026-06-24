@@ -2,6 +2,7 @@ package org.example.footballleague.controller;
 
 import org.example.footballleague.Service.UserService;
 import org.example.footballleague.model.User;
+import org.example.footballleague.security.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,9 +15,11 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtService jwtService;
 
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, JwtService jwtService) {
         this.userService = userService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -39,7 +42,10 @@ public class AuthController {
         }
 
         UserService.DailyBonusResult bonus = userService.applyDailyBonus(loggedInUser);
-        return ResponseEntity.ok(UserResponse.from(bonus.user(), bonus.granted()));
+        // Phase 1 (additive): issue a JWT alongside the existing fields. The token
+        // is not yet required by any endpoint; the frontend can ignore it for now.
+        String token = jwtService.generateToken(loggedInUser.getId(), loggedInUser.getRole());
+        return ResponseEntity.ok(UserResponse.from(bonus.user(), bonus.granted(), token));
     }
 
     @GetMapping("/profile/{id}")
@@ -73,12 +79,17 @@ public class AuthController {
     }
 
     public record UserResponse(Long id, String username, String email, Double balance, String role,
-                               String profileImageUrl, String profileLink, boolean dailyBonusGranted) {
+                               String profileImageUrl, String profileLink, boolean dailyBonusGranted,
+                               String token) {
         public static UserResponse from(User user) {
-            return from(user, false);
+            return from(user, false, null);
         }
 
         public static UserResponse from(User user, boolean dailyBonusGranted) {
+            return from(user, dailyBonusGranted, null);
+        }
+
+        public static UserResponse from(User user, boolean dailyBonusGranted, String token) {
             return new UserResponse(
                     user.getId(),
                     user.getUsername(),
@@ -87,7 +98,8 @@ public class AuthController {
                     user.getRole(),
                     user.getProfileImageUrl(),
                     user.getProfileLink(),
-                    dailyBonusGranted
+                    dailyBonusGranted,
+                    token
             );
         }
     }
