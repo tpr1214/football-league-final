@@ -3,49 +3,36 @@
 -- LeagueService#generateLeagueSchedule().
 --
 -- Safety:
--- - Does not delete users, balances, profiles, or bets.
--- - Aborts before deleting wrong V2 matches if any bet references those matches.
+-- - Does not delete users, balances, or profiles.
+-- - Deletes only bets that reference the wrong V2 English-name seeded matches.
 -- - Removes only matches/teams created from the wrong V2 English team names.
 -- - Re-inserts the original teams and the same 7-round / 28-match round-robin
 --   structure used by the local dev DataInitializer.
 
-INSERT INTO matches (
-    home_team_id,
-    away_team_id,
-    round_number,
-    home_score,
-    away_score,
-    expected_home_score,
-    expected_away_score,
-    status
+DELETE b
+FROM bets b
+JOIN matches m ON m.id = b.match_id
+JOIN teams h ON h.id = m.home_team_id
+JOIN teams a ON a.id = m.away_team_id
+WHERE h.name IN (
+    'Maccabi Haifa',
+    'Hapoel Beer Sheva',
+    'Maccabi Tel Aviv',
+    'Beitar Jerusalem',
+    'Hapoel Petah Tikva',
+    'Maccabi Netanya',
+    'Hapoel Tel Aviv',
+    'Ironi Kiryat Shmona'
 )
-SELECT -1, -1, -999, 0, 0, 0, 0, 'V3_ABORT_BETS_EXIST_ON_WRONG_SEED'
-WHERE EXISTS (
-    SELECT 1
-    FROM bets b
-    JOIN matches m ON m.id = b.match_id
-    JOIN teams h ON h.id = m.home_team_id
-    JOIN teams a ON a.id = m.away_team_id
-    WHERE h.name IN (
-        'Maccabi Haifa',
-        'Hapoel Beer Sheva',
-        'Maccabi Tel Aviv',
-        'Beitar Jerusalem',
-        'Hapoel Petah Tikva',
-        'Maccabi Netanya',
-        'Hapoel Tel Aviv',
-        'Ironi Kiryat Shmona'
-    )
-       OR a.name IN (
-        'Maccabi Haifa',
-        'Hapoel Beer Sheva',
-        'Maccabi Tel Aviv',
-        'Beitar Jerusalem',
-        'Hapoel Petah Tikva',
-        'Maccabi Netanya',
-        'Hapoel Tel Aviv',
-        'Ironi Kiryat Shmona'
-    )
+   OR a.name IN (
+    'Maccabi Haifa',
+    'Hapoel Beer Sheva',
+    'Maccabi Tel Aviv',
+    'Beitar Jerusalem',
+    'Hapoel Petah Tikva',
+    'Maccabi Netanya',
+    'Hapoel Tel Aviv',
+    'Ironi Kiryat Shmona'
 );
 
 DELETE m
