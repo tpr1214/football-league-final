@@ -7,7 +7,11 @@ CREATE TABLE IF NOT EXISTS users (
                                      password_hash VARCHAR(255) NOT NULL,
                                      email VARCHAR(255) NOT NULL UNIQUE,
                                      balance DOUBLE DEFAULT 0.0,
-                                     profile_image_url VARCHAR(255)
+                                     role VARCHAR(50) NOT NULL DEFAULT 'USER',
+                                     last_daily_bonus_date DATE,
+                                     profile_image_url VARCHAR(2048),
+                                     profile_image_link VARCHAR(2048),
+                                     profile_link VARCHAR(2048)
 );
 
 

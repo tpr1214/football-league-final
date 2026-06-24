@@ -4,9 +4,11 @@ import jakarta.annotation.PostConstruct;
 import org.example.footballleague.Service.LeagueService;
 import org.example.footballleague.model.Match;
 import org.example.footballleague.model.Team;
+import org.example.footballleague.model.User;
 import org.example.footballleague.repositories.BetRepository;
 import org.example.footballleague.repositories.MatchRepository;
 import org.example.footballleague.repositories.TeamRepository;
+import org.example.footballleague.repositories.UserRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,16 +21,19 @@ public class DataInitializer {
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
     private final BetRepository betRepository;
+    private final UserRepository userRepository;
     private final LeagueService leagueService;
 
 
     public DataInitializer(TeamRepository teamRepository,
                            MatchRepository matchRepository,
                            BetRepository betRepository,
+                           UserRepository userRepository,
                            LeagueService leagueService) {
         this.teamRepository = teamRepository;
         this.matchRepository = matchRepository;
         this.betRepository = betRepository;
+        this.userRepository = userRepository;
         this.leagueService = leagueService;
     }
 
@@ -55,6 +60,26 @@ public class DataInitializer {
 
         matchRepository.saveAll(generatedMatches);
         System.out.println(">> אלגוריתם רואנד-רובין הופעל בהצלחה! 28 משחקים הוכנסו ל-DB.");
+
+        seedAdminUser();
+    }
+
+    private void seedAdminUser() {
+        String adminEmail = "admin@football.com";
+        if (userRepository.findByEmail(adminEmail).isPresent()) {
+            System.out.println(">> משתמש מנהל כבר קיים, מדלג על יצירה.");
+            return;
+        }
+
+        User admin = new User();
+        admin.setUsername("admin");
+        admin.setEmail(adminEmail);
+        admin.setPasswordHash("admin123");
+        admin.setBalance(1000000.0);
+        admin.setRole("ADMIN");
+
+        userRepository.save(admin);
+        System.out.println(">> משתמש מנהל נוצר בהצלחה! email=admin@football.com | password=admin123");
     }
 
     private List<Team> createTeams() {

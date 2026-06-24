@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Uploaded files ###
+uploads/
+
+### Local test/run artifacts (not part of the project) ###
+node_modules/
+package.json
+package-lock.json
+*.log
