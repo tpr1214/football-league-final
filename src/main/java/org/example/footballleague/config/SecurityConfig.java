@@ -50,7 +50,10 @@ public class SecurityConfig {
                         // Phase 3B-2: bet endpoints require authentication; per-user
                         // ownership (or ADMIN) is enforced in the controller.
                         .requestMatchers("/api/bets/**").authenticated()
-                        // Everything else stays open for now (profile/user/SSE).
+                        // Phase 3B-3: profile endpoints require authentication; per-user
+                        // ownership (or ADMIN) is enforced in the controller.
+                        .requestMatchers("/api/auth/profile/**").authenticated()
+                        // Everything else stays open for now (user/SSE).
                         .anyRequest().permitAll())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

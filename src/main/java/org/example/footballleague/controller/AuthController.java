@@ -2,9 +2,12 @@ package org.example.footballleague.controller;
 
 import org.example.footballleague.Service.UserService;
 import org.example.footballleague.model.User;
+import org.example.footballleague.security.AuthenticatedUser;
 import org.example.footballleague.security.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,7 +52,9 @@ public class AuthController {
     }
 
     @GetMapping("/profile/{id}")
-    public ResponseEntity<?> getUserProfile(@PathVariable Long id) {
+    public ResponseEntity<?> getUserProfile(@PathVariable Long id,
+                                            @AuthenticationPrincipal AuthenticatedUser principal) {
+        requireSelfOrAdmin(id, principal);
         Optional<User> userOpt = userService.getUserById(id);
 
         if (userOpt.isPresent()) {
@@ -63,16 +68,28 @@ public class AuthController {
     }
 
     @PutMapping("/profile/{id}")
-    public ResponseEntity<UserResponse> updateUserProfile(@PathVariable Long id, @RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<UserResponse> updateUserProfile(@PathVariable Long id,
+                                                          @RequestBody UpdateProfileRequest request,
+                                                          @AuthenticationPrincipal AuthenticatedUser principal) {
+        requireSelfOrAdmin(id, principal);
         User updatedUser = userService.updateProfile(id, request.username(), request.profileImageUrl(), request.profileLink());
         return ResponseEntity.ok(UserResponse.from(updatedUser));
     }
 
     @PostMapping("/profile/{id}/image")
     public ResponseEntity<UserResponse> uploadProfileImage(@PathVariable Long id,
-                                                           @RequestParam("file") MultipartFile file) {
+                                                           @RequestParam("file") MultipartFile file,
+                                                           @AuthenticationPrincipal AuthenticatedUser principal) {
+        requireSelfOrAdmin(id, principal);
         User updatedUser = userService.updateProfileImage(id, file);
         return ResponseEntity.ok(UserResponse.from(updatedUser));
+    }
+
+    private static void requireSelfOrAdmin(Long profileId, AuthenticatedUser principal) {
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(principal.role());
+        if (!isAdmin && !principal.userId().equals(profileId)) {
+            throw new AccessDeniedException("׳׳™׳ ׳”׳¨׳©׳׳” ׳׳¦׳₪׳•׳× ׳‘׳₪׳¨׳•׳₪׳™׳ ׳©׳ ׳׳©׳×׳׳© ׳׳—׳¨");
+        }
     }
 
     public record UpdateProfileRequest(String username, String profileImageUrl, String profileLink) {
