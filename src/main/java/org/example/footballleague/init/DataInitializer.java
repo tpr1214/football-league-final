@@ -9,6 +9,9 @@ import org.example.footballleague.repositories.BetRepository;
 import org.example.footballleague.repositories.MatchRepository;
 import org.example.footballleague.repositories.TeamRepository;
 import org.example.footballleague.repositories.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,23 +26,36 @@ public class DataInitializer {
     private final BetRepository betRepository;
     private final UserRepository userRepository;
     private final LeagueService leagueService;
+    private final Environment environment;
+
+    @Value("${app.seed.reset-data:false}")
+    private boolean resetData;
+
+    @Value("${app.seed.create-dev-admin:false}")
+    private boolean createDevAdmin;
 
 
     public DataInitializer(TeamRepository teamRepository,
                            MatchRepository matchRepository,
                            BetRepository betRepository,
                            UserRepository userRepository,
-                           LeagueService leagueService) {
+                           LeagueService leagueService,
+                           Environment environment) {
         this.teamRepository = teamRepository;
         this.matchRepository = matchRepository;
         this.betRepository = betRepository;
         this.userRepository = userRepository;
         this.leagueService = leagueService;
+        this.environment = environment;
     }
 
     @PostConstruct
     @Transactional
     public void initData() {
+        if (!shouldRunDevSeed()) {
+            System.out.println(">> DataInitializer skipped. Destructive seed/reset is disabled outside explicit dev mode.");
+            return;
+        }
 
         betRepository.deleteAll();
         matchRepository.deleteAll(); 
@@ -61,7 +77,13 @@ public class DataInitializer {
         matchRepository.saveAll(generatedMatches);
         System.out.println(">> אלגוריתם רואנד-רובין הופעל בהצלחה! 28 משחקים הוכנסו ל-DB.");
 
-        seedAdminUser();
+        if (createDevAdmin) {
+            seedAdminUser();
+        }
+    }
+
+    private boolean shouldRunDevSeed() {
+        return resetData && environment.acceptsProfiles(Profiles.of("dev"));
     }
 
     private void seedAdminUser() {
