@@ -68,6 +68,10 @@ public class BettingService {
 
     @Transactional
     public Bet placeBet(Bet bet, User user, Match match) {
+        if (bet.getAmount() == null || bet.getAmount() <= 0) {
+            throw new IllegalArgumentException("סכום ההימור חייב להיות גדול מאפס");
+        }
+
         if (match.getStatus() != MatchStatus.PENDING) {
             throw new IllegalStateException("ניתן להמר רק על משחקים שטרם החלו");
         }
