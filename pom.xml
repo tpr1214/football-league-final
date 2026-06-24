@@ -88,6 +88,15 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- MockMvc + security-test autoconfiguration (Boot 4 modularized these out
+             of spring-boot-starter-test). Test scope only; used by the security
+             authorization tests. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>

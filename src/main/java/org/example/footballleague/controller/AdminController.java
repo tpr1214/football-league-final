@@ -2,7 +2,6 @@ package org.example.footballleague.controller;
 
 import org.example.footballleague.Service.UserService;
 import org.example.footballleague.model.User;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,12 +17,10 @@ public class AdminController {
         this.userService = userService;
     }
 
+    // Authorization is enforced by Spring Security (ROLE_ADMIN on /api/admin/**),
+    // derived from the JWT — no longer from the spoofable X-User-Id header.
     @GetMapping("/users")
-    public ResponseEntity<?> listUsers(@RequestHeader(value = "X-User-Id", required = false) Long requesterId) {
-        if (!userService.isAdmin(requesterId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("גישה נדחתה: נדרשות הרשאות מנהל");
-        }
-
+    public ResponseEntity<?> listUsers() {
         List<AdminUserResponse> users = userService.getAllUsers().stream()
                 .map(AdminUserResponse::from)
                 .toList();
@@ -32,12 +29,7 @@ public class AdminController {
 
     @PutMapping("/users/{id}/balance")
     public ResponseEntity<?> updateBalance(@PathVariable Long id,
-                                           @RequestHeader(value = "X-User-Id", required = false) Long requesterId,
                                            @RequestBody UpdateBalanceRequest request) {
-        if (!userService.isAdmin(requesterId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("גישה נדחתה: נדרשות הרשאות מנהל");
-        }
-
         User updated = userService.updateBalance(id, request.balance());
         return ResponseEntity.ok(AdminUserResponse.from(updated));
     }

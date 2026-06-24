@@ -4,20 +4,24 @@ import org.example.footballleague.security.JwtAuthenticationFilter;
 import org.example.footballleague.security.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 /**
- * Phase 1 (additive): adding spring-boot-starter-security would otherwise lock
- * every endpoint behind HTTP Basic. This config keeps the API open exactly as
- * before — it only prevents that default lockdown while the JWT foundation is
- * introduced. Authentication is NOT enforced here: all requests are permitted,
- * no JWT is required, and the login prompt / CSRF are disabled for the stateless
- * REST API. Endpoint restrictions and the JWT filter come in later phases.
+ * Phase 3A: begins enforcing real authorization, but ONLY on the highest-risk
+ * endpoints — admin APIs and the operational "start next round" action — which
+ * now require a JWT carrying role ADMIN. Everything else (auth, read-only league
+ * data, bets, profiles, SSE) remains permitAll for now; those phases come later.
+ *
+ * Unauthenticated requests to a protected endpoint get 401 (via the entry point);
+ * authenticated-but-wrong-role requests get 403 (default access-denied handling).
  *
  * CORS continues to be governed by {@link WebConfig#addCorsMappings(CorsRegistry)};
  * enabling cors() here lets the security chain defer to that existing policy.
@@ -32,11 +36,25 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .authorizeHttpRequests(auth -> auth
+                        // Public authentication endpoints.
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                        // Public read-only league data.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/league/matches",
+                                "/api/league/table",
+                                "/api/league/matches/upcoming").permitAll()
+                        // Phase 3A enforced endpoints: admin APIs + operational league action.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/league/start-next-round").hasRole("ADMIN")
+                        // Everything else stays open for now (bets/profile/user/SSE).
+                        .anyRequest().permitAll())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
-                // Phase 2: recognize Bearer tokens and populate the SecurityContext.
-                // Still non-enforcing — anyRequest().permitAll() above is unchanged.
+                // 401 for missing/invalid auth; 403 (default) for wrong role.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                // Recognize Bearer tokens and populate the SecurityContext.
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class);
 
