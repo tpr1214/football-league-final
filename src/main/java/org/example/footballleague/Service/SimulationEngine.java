@@ -7,6 +7,7 @@ import org.example.footballleague.repositories.MatchRepository;
 import org.example.footballleague.repositories.TeamRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -31,6 +32,10 @@ public class SimulationEngine {
     }
 
     public void runNextRound(List<Match> currentRoundMatches) {
+        runNextRound(currentRoundMatches, null);
+    }
+
+    public void runNextRound(List<Match> currentRoundMatches, Long userId) {
         if (currentRoundMatches == null || currentRoundMatches.isEmpty()) {
             throw new IllegalArgumentException("אין משחקים להרצה במחזור הקרוב");
         }
@@ -43,11 +48,13 @@ public class SimulationEngine {
                 matchRepository.save(match);
             }
 
-            sseService.broadcastMatchUpdate(Map.of(
-                    "type", "ROUND_STARTED",
-                    "roundNumber", currentRoundMatches.get(0).getRoundNumber(),
-                    "matches", currentRoundMatches
-            ));
+            Map<String, Object> roundStarted = new HashMap<>();
+            roundStarted.put("type", "ROUND_STARTED");
+            roundStarted.put("userId", userId);
+            roundStarted.put("roundNumber", currentRoundMatches.get(0).getRoundNumber());
+            roundStarted.put("cycleNumber", currentRoundMatches.get(0).getCycleNumber());
+            roundStarted.put("matches", currentRoundMatches);
+            sseService.broadcastMatchUpdate(userId, roundStarted);
 
 
             for (int currentSecond = 1; currentSecond <= 30; currentSecond++) {
@@ -66,7 +73,7 @@ public class SimulationEngine {
 
                     if (goalScored) {
                         matchRepository.save(match);
-                        sseService.broadcastGoal(createMatchEvent("GOAL", match, currentSecond));
+                        sseService.broadcastGoal(userId, createMatchEvent("GOAL", match, currentSecond, userId));
                         System.out.println("GOAL! Match " + match.getId() + " | " + match.getHomeTeam().getName() + " " + match.getHomeScore() + " - " + match.getAwayScore() + " " + match.getAwayTeam().getName());
                     }
                 }
@@ -83,11 +90,13 @@ public class SimulationEngine {
                 bettingService.settleBets(match);
             }
 
-            sseService.broadcastRoundComplete(Map.of(
-                    "type", "ROUND_COMPLETED",
-                    "roundNumber", currentRoundMatches.get(0).getRoundNumber(),
-                    "matches", currentRoundMatches
-            ));
+            Map<String, Object> roundCompleted = new HashMap<>();
+            roundCompleted.put("type", "ROUND_COMPLETED");
+            roundCompleted.put("userId", userId);
+            roundCompleted.put("roundNumber", currentRoundMatches.get(0).getRoundNumber());
+            roundCompleted.put("cycleNumber", currentRoundMatches.get(0).getCycleNumber());
+            roundCompleted.put("matches", currentRoundMatches);
+            sseService.broadcastRoundComplete(userId, roundCompleted);
 
         }).start();
     }
@@ -115,18 +124,20 @@ public class SimulationEngine {
         return updated;
     }
 
-    private Map<String, Object> createMatchEvent(String type, Match match, int currentSecond) {
-        return Map.of(
-                "type", type,
-                "second", currentSecond,
-                "matchId", match.getId(),
-                "roundNumber", match.getRoundNumber(),
-                "homeTeam", match.getHomeTeam().getName(),
-                "awayTeam", match.getAwayTeam().getName(),
-                "homeScore", match.getHomeScore(),
-                "awayScore", match.getAwayScore(),
-                "status", match.getStatus()
-        );
+    private Map<String, Object> createMatchEvent(String type, Match match, int currentSecond, Long userId) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", type);
+        event.put("userId", userId);
+        event.put("second", currentSecond);
+        event.put("matchId", match.getId());
+        event.put("roundNumber", match.getRoundNumber());
+        event.put("cycleNumber", match.getCycleNumber());
+        event.put("homeTeam", match.getHomeTeam().getName());
+        event.put("awayTeam", match.getAwayTeam().getName());
+        event.put("homeScore", match.getHomeScore());
+        event.put("awayScore", match.getAwayScore());
+        event.put("status", match.getStatus());
+        return event;
     }
 
     public void calculateMatchOutcome(Match match) {

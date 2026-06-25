@@ -17,24 +17,30 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS teams (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                     name VARCHAR(255) NOT NULL UNIQUE,
+                                     owner_id BIGINT,
+                                     name VARCHAR(255) NOT NULL,
                                      skill_level INT NOT NULL,
                                      points INT DEFAULT 0,
                                      goals_for INT DEFAULT 0,
-                                     goals_against INT DEFAULT 0
+                                     goals_against INT DEFAULT 0,
+                                     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+                                     UNIQUE KEY uk_teams_owner_name (owner_id, name)
 );
 
 
 CREATE TABLE IF NOT EXISTS matches (
                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                       owner_id BIGINT,
                                        home_team_id BIGINT NOT NULL,
                                        away_team_id BIGINT NOT NULL,
+                                       cycle_number INT DEFAULT 1,
                                        round_number INT NOT NULL,
                                        home_score INT DEFAULT 0,
                                        away_score INT DEFAULT 0,
                                        expected_home_score INT DEFAULT 0,
                                        expected_away_score INT DEFAULT 0,
                                        status VARCHAR(50) DEFAULT 'PENDING',
+                                       FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
                                        FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
                                        FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE
 );

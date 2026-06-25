@@ -17,9 +17,9 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 /**
  * Phase 3A: begins enforcing real authorization, but ONLY on the highest-risk
  * endpoints — the admin APIs — which require a JWT carrying role ADMIN. The
- * "start next round" action is intentionally open so any live-dashboard visitor
- * can advance the league. Everything else (auth, read-only league data, bets,
- * profiles, SSE) remains permitAll for now; those phases come later.
+ * League, bet and profile endpoints are user-scoped and require a JWT. Admin
+ * APIs require an ADMIN JWT. Auth and SSE remain public; the SSE stream is
+ * filtered by the requested user id because EventSource cannot send auth headers.
  *
  * Unauthenticated requests to a protected endpoint get 401 (via the entry point);
  * authenticated-but-wrong-role requests get 403 (default access-denied handling).
@@ -40,19 +40,17 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication endpoints.
                         .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
-                        // Public read-only league data.
+                        // User-owned league data.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/league/matches",
                                 "/api/league/table",
-                                "/api/league/matches/upcoming").permitAll()
+                                "/api/league/matches/upcoming").authenticated()
                         // Admin APIs stay ADMIN-only.
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        // Starting the next round and regenerating fixtures are open
-                        // operational actions: any visitor of the live dashboard may
-                        // advance the league or start a new cycle once a season ends.
+                        // These actions advance only the authenticated user's league.
                         .requestMatchers(HttpMethod.POST,
                                 "/api/league/start-next-round",
-                                "/api/league/regenerate-rounds").permitAll()
+                                "/api/league/regenerate-rounds").authenticated()
                         // Phase 3B-2: bet endpoints require authentication; per-user
                         // ownership (or ADMIN) is enforced in the controller.
                         .requestMatchers("/api/bets/**").authenticated()

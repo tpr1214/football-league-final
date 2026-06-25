@@ -209,13 +209,13 @@ class ProfileAuthorizationTest {
     }
 
     @Test
-    @DisplayName("Public league read endpoints stay open")
-    void publicLeagueReadEndpointsStayOpen() throws Exception {
+    @DisplayName("League read endpoints require a token")
+    void leagueReadEndpointsRequireToken() throws Exception {
         mockMvc.perform(get("/api/league/matches"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/league/table"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/league/matches/upcoming"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 }

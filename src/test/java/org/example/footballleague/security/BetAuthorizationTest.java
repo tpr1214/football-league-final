@@ -179,12 +179,12 @@ class BetAuthorizationTest {
                 .andExpect(status().isOk());
     }
 
-    // ---------- public endpoint still open ----------
+    // ---------- user-owned league endpoint ----------
 
     @Test
-    @DisplayName("GET /api/league/matches stays public (no token, 200)")
-    void publicMatchesStillOpen() throws Exception {
+    @DisplayName("GET /api/league/matches without a token is rejected (401)")
+    void leagueMatchesRequireToken() throws Exception {
         mockMvc.perform(get("/api/league/matches"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 }

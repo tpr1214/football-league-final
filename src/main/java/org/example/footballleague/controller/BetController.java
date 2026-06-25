@@ -46,6 +46,9 @@ public class BetController {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Match match = matchRepository.findById(request.matchId())
                 .orElseThrow(() -> new IllegalArgumentException("Match not found"));
+        if (match.getOwner() != null && !principal.userId().equals(match.getOwner().getId())) {
+            throw new AccessDeniedException("אין הרשאה להמר על משחק של משתמש אחר");
+        }
 
         Bet bet = new Bet();
         bet.setUser(user);

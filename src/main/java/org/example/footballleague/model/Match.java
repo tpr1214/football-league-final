@@ -1,5 +1,6 @@
 package org.example.footballleague.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -10,6 +11,10 @@ public class Match {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    @JsonIgnore
+    private User owner;
 
     @ManyToOne
     @JoinColumn(name = "home_team_id", nullable = false)
@@ -20,6 +25,7 @@ public class Match {
     @JoinColumn(name = "away_team_id", nullable = false)
     private Team awayTeam;
 
+    private int cycleNumber = 1;
     private int roundNumber;
     private int homeScore = 0;
     private int awayScore = 0;
@@ -54,6 +60,14 @@ private int expectedAwayScore;
         this.id = id;
     }
 
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+
     public Team getHomeTeam() {
         return homeTeam;
     }
@@ -76,6 +90,14 @@ private int expectedAwayScore;
 
     public void setRoundNumber(int roundNumber) {
         this.roundNumber = roundNumber;
+    }
+
+    public int getCycleNumber() {
+        return cycleNumber;
+    }
+
+    public void setCycleNumber(int cycleNumber) {
+        this.cycleNumber = cycleNumber;
     }
 
     public int getHomeScore() {

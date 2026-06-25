@@ -3,8 +3,10 @@ package org.example.footballleague.Service;
 import org.example.footballleague.model.Match;
 import org.example.footballleague.model.MatchStatus;
 import org.example.footballleague.model.Team;
+import org.example.footballleague.model.User;
 import org.example.footballleague.repositories.MatchRepository;
 import org.example.footballleague.repositories.TeamRepository;
+import org.example.footballleague.repositories.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,6 +49,9 @@ class LeagueServiceTest {
 
     @Mock
     private SimulationEngine simulationEngine;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private LeagueService leagueService;
@@ -81,6 +87,14 @@ class LeagueServiceTest {
         m.setRoundNumber(roundNumber);
         m.setStatus(MatchStatus.PENDING);
         return m;
+    }
+
+    private User user(Long id) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername("user-" + id);
+        user.setEmail("user-" + id + "@example.com");
+        return user;
     }
 
     private String pairKey(Match m) {
@@ -299,7 +313,7 @@ class LeagueServiceTest {
         }
 
         @Test
-        @DisplayName("Appends a fresh round-robin after the last round when nothing is pending or live")
+        @DisplayName("Creates a fresh round-robin when nothing is pending or live")
         void regenerateAppendsNewRounds() {
             when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of());
             when(matchRepository.findByStatus(MatchStatus.PENDING)).thenReturn(List.of());
@@ -311,8 +325,8 @@ class LeagueServiceTest {
 
             assertEquals(28, result.size(), "8 teams -> 7 rounds * 4 matches");
             org.junit.jupiter.api.Assertions.assertTrue(
-                    result.stream().allMatch(m -> m.getRoundNumber() > 7),
-                    "new fixtures continue after the last played round");
+                    result.stream().allMatch(m -> m.getRoundNumber() >= 1 && m.getRoundNumber() <= 7),
+                    "new fixtures restart the round numbering");
             org.junit.jupiter.api.Assertions.assertTrue(
                     result.stream().allMatch(m -> m.getStatus() == MatchStatus.PENDING));
         }
@@ -355,6 +369,39 @@ class LeagueServiceTest {
             verify(teamRepository).saveAll(anyList());     // default teams seeded
             verify(matchRepository).saveAll(anyList());    // fixture list generated
             verify(simulationEngine).runNextRound(anyList());
+        }
+
+        @Test
+        @DisplayName("Regenerating a user's finished cycle creates a new private cycle with rounds 1..7")
+        void regenerateUserCycleRestartsRoundNumbers() {
+            Long userId = 42L;
+            User owner = user(userId);
+            List<Team> ownedTeams = teams(8);
+            ownedTeams.forEach(team -> {
+                team.setOwner(owner);
+                team.setPoints(12);
+                team.setGoalsFor(9);
+                team.setGoalsAgainst(4);
+            });
+
+            when(matchRepository.countByOwnerId(userId)).thenReturn(28L);
+            when(matchRepository.findMaxCycleNumberByOwnerId(userId)).thenReturn(1);
+            when(matchRepository.findByOwnerIdAndCycleNumberAndStatus(userId, 1, MatchStatus.LIVE)).thenReturn(List.of());
+            when(matchRepository.findByOwnerIdAndCycleNumberAndStatus(userId, 1, MatchStatus.PENDING)).thenReturn(List.of());
+            when(teamRepository.findByOwnerId(userId)).thenReturn(ownedTeams);
+            when(teamRepository.saveAll(ownedTeams)).thenReturn(ownedTeams);
+            when(userRepository.findById(userId)).thenReturn(Optional.of(owner));
+            when(matchRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+            List<Match> result = leagueService.regenerateSchedule(userId);
+
+            assertEquals(28, result.size());
+            org.junit.jupiter.api.Assertions.assertTrue(result.stream().allMatch(match -> match.getOwner() == owner));
+            org.junit.jupiter.api.Assertions.assertTrue(result.stream().allMatch(match -> match.getCycleNumber() == 2));
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    result.stream().allMatch(match -> match.getRoundNumber() >= 1 && match.getRoundNumber() <= 7));
+            org.junit.jupiter.api.Assertions.assertTrue(ownedTeams.stream().allMatch(team ->
+                    team.getPoints() == 0 && team.getGoalsFor() == 0 && team.getGoalsAgainst() == 0));
         }
     }
 }

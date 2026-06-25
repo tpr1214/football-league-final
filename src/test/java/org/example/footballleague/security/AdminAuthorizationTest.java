@@ -21,8 +21,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the application's own {@link JwtService} so the {@link JwtAuthenticationFilter}
  * accepts them.
  *
- * Only the admin APIs are enforced; public read-only league data AND the now-open
- * POST /api/league/start-next-round action must remain reachable by anyone.
+ * Admin APIs require ADMIN. League APIs require an authenticated user because
+ * league state is now scoped per user.
  * {@link LeagueService} is mocked so exercising start-next-round here verifies
  * authorization only, without kicking off the real (threaded) round simulation.
  */
@@ -67,41 +67,35 @@ class AdminAuthorizationTest {
                 .andExpect(status().isOk());
     }
 
-    // ---------- POST /api/league/start-next-round (now public) ----------
+    // ---------- POST /api/league/start-next-round ----------
 
     @Test
-    @DisplayName("POST /api/league/start-next-round is public without a token (not 401/403)")
+    @DisplayName("POST /api/league/start-next-round without a token is rejected (401)")
     void startRoundNoToken() throws Exception {
         mockMvc.perform(post("/api/league/start-next-round"))
-                .andExpect(result -> assertNotAuthBlocked(result.getResponse().getStatus()));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("POST /api/league/start-next-round is public with a USER token (not 401/403)")
+    @DisplayName("POST /api/league/start-next-round is allowed with a USER token")
     void startRoundUserToken() throws Exception {
         mockMvc.perform(post("/api/league/start-next-round").header(HttpHeaders.AUTHORIZATION, bearer("USER")))
-                .andExpect(result -> assertNotAuthBlocked(result.getResponse().getStatus()));
+                .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("POST /api/league/start-next-round is also reachable with an ADMIN token (not 401/403)")
+    @DisplayName("POST /api/league/start-next-round is allowed with an ADMIN token")
     void startRoundAdminToken() throws Exception {
         mockMvc.perform(post("/api/league/start-next-round").header(HttpHeaders.AUTHORIZATION, bearer("ADMIN")))
-                .andExpect(result -> assertNotAuthBlocked(result.getResponse().getStatus()));
+                .andExpect(status().isOk());
     }
 
-    private static void assertNotAuthBlocked(int status) {
-        if (status == 401 || status == 403) {
-            throw new AssertionError("start-next-round must be public, but got " + status);
-        }
-    }
-
-    // ---------- public endpoint still open ----------
+    // ---------- user-owned league endpoint ----------
 
     @Test
-    @DisplayName("GET /api/league/matches stays public (no token, 200)")
-    void publicMatchesOpen() throws Exception {
+    @DisplayName("GET /api/league/matches without a token is rejected (401)")
+    void matchesRequireToken() throws Exception {
         mockMvc.perform(get("/api/league/matches"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 }

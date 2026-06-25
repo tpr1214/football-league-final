@@ -1,16 +1,23 @@
 package org.example.footballleague.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "teams")
+@Table(name = "teams",
+        uniqueConstraints = @UniqueConstraint(name = "uk_teams_owner_name", columnNames = {"owner_id", "name"}))
 public class Team {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    @JsonIgnore
+    private User owner;
+
+    @Column(nullable = false)
     private String name;
     private int skillLevel;
     private int points = 0;
@@ -25,6 +32,14 @@ public class Team {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 
     public String getName() {
