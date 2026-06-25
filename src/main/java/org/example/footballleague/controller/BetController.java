@@ -38,22 +38,7 @@ public class BetController {
     @PostMapping("/place")
     public ResponseEntity<BetResponse> placeBet(@RequestBody PlaceBetRequest request,
                                                 @AuthenticationPrincipal AuthenticatedUser principal) {
-        if (request.amount() == null || request.amount() <= 0) {
-            throw new IllegalArgumentException("Bet amount must be greater than zero");
-        }
-        if (request.predictedOutcome() == null) {
-            throw new IllegalArgumentException("Predicted outcome is required");
-        }
-        if (request.predictedHomeScore() == null || request.predictedAwayScore() == null) {
-            throw new IllegalArgumentException("Predicted score is required");
-        }
-        if (request.predictedHomeScore() < 0 || request.predictedAwayScore() < 0) {
-            throw new IllegalArgumentException("Predicted score cannot be negative");
-        }
-        if (request.predictedHomeScore() > 3 || request.predictedAwayScore() > 3) {
-            throw new IllegalArgumentException("Predicted score cannot be higher than 3 goals per team");
-        }
-        validateScoreMatchesOutcome(request.predictedOutcome(), request.predictedHomeScore(), request.predictedAwayScore());
+        validatePlaceBetRequest(request);
 
         // Identity comes from the JWT, never from the request body: a bet is always
         // placed for the authenticated user, even if the body carries a different userId.
@@ -148,6 +133,43 @@ public class BetController {
                     match.getAwayScore()
             );
         }
+    }
+
+    /**
+     * Validates a bet request. Two valid shapes are accepted:
+     *  - Exact-score bet: both predicted scores are provided (0..3) and must be
+     *    consistent with the predicted outcome.
+     *  - Outcome-only bet: both predicted scores are omitted (null); the bet wins
+     *    on the outcome alone (e.g. a "draw, any score" bet).
+     * Package-private and static so it can be unit-tested without the web layer.
+     */
+    static void validatePlaceBetRequest(PlaceBetRequest request) {
+        if (request.amount() == null || request.amount() <= 0) {
+            throw new IllegalArgumentException("Bet amount must be greater than zero");
+        }
+        if (request.predictedOutcome() == null) {
+            throw new IllegalArgumentException("Predicted outcome is required");
+        }
+
+        boolean hasHomeScore = request.predictedHomeScore() != null;
+        boolean hasAwayScore = request.predictedAwayScore() != null;
+        if (hasHomeScore != hasAwayScore) {
+            throw new IllegalArgumentException("Provide both predicted scores, or neither");
+        }
+
+        // No scores -> outcome-only bet; nothing more to validate.
+        if (!hasHomeScore) {
+            return;
+        }
+
+        if (request.predictedHomeScore() < 0 || request.predictedAwayScore() < 0) {
+            throw new IllegalArgumentException("Predicted score cannot be negative");
+        }
+        if (request.predictedHomeScore() > 3 || request.predictedAwayScore() > 3) {
+            throw new IllegalArgumentException("Predicted score cannot be higher than 3 goals per team");
+        }
+        validateScoreMatchesOutcome(request.predictedOutcome(),
+                request.predictedHomeScore(), request.predictedAwayScore());
     }
 
     private static void validateScoreMatchesOutcome(BetOutcome outcome, int homeScore, int awayScore) {
