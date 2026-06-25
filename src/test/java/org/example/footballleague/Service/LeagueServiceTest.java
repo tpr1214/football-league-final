@@ -259,6 +259,7 @@ class LeagueServiceTest {
         @Test
         @DisplayName("Starts the lowest pending round and triggers the simulation engine once")
         void startsNextPendingRound() {
+            when(matchRepository.count()).thenReturn(28L); // schedule already exists -> no bootstrap
             when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of());
             when(matchRepository.findByStatus(MatchStatus.PENDING))
                     .thenReturn(List.of(roundMatch(3), roundMatch(2), roundMatch(3), roundMatch(2)));
@@ -275,6 +276,7 @@ class LeagueServiceTest {
         @Test
         @DisplayName("Does NOT start a new round if a LIVE round already exists")
         void rejectsWhenRoundAlreadyLive() {
+            when(matchRepository.count()).thenReturn(28L); // schedule already exists -> no bootstrap
             when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of(roundMatch(1)));
 
             assertThrows(IllegalStateException.class, () -> leagueService.startNextRound());
@@ -286,6 +288,7 @@ class LeagueServiceTest {
         @Test
         @DisplayName("Throws when there are no pending rounds and never calls the simulation engine")
         void noPendingRounds() {
+            when(matchRepository.count()).thenReturn(28L); // schedule already exists -> no bootstrap
             when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of());
             when(matchRepository.findByStatus(MatchStatus.PENDING)).thenReturn(List.of());
 
@@ -293,6 +296,25 @@ class LeagueServiceTest {
 
             verify(matchRepository, never()).findByRoundNumberAndStatus(eq(0), any());
             verify(simulationEngine, never()).runNextRound(any());
+        }
+
+        @Test
+        @DisplayName("Bootstraps teams and a fixture list on a fresh DB, then starts round one")
+        void bootstrapsLeagueWhenDatabaseEmpty() {
+            when(matchRepository.count()).thenReturn(0L);                 // empty DB -> bootstrap
+            when(teamRepository.findAll()).thenReturn(new ArrayList<>()); // no teams yet
+            when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+            when(matchRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+            when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of());
+            when(matchRepository.findByStatus(MatchStatus.PENDING)).thenReturn(List.of(roundMatch(1)));
+            when(matchRepository.findByRoundNumberAndStatus(1, MatchStatus.PENDING))
+                    .thenReturn(List.of(roundMatch(1)));
+
+            leagueService.startNextRound();
+
+            verify(teamRepository).saveAll(anyList());     // default teams seeded
+            verify(matchRepository).saveAll(anyList());    // fixture list generated
+            verify(simulationEngine).runNextRound(anyList());
         }
     }
 }

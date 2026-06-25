@@ -1,11 +1,13 @@
 package org.example.footballleague.security;
 
+import org.example.footballleague.Service.LeagueService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
@@ -19,8 +21,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the application's own {@link JwtService} so the {@link JwtAuthenticationFilter}
  * accepts them.
  *
- * Only admin APIs and POST /api/league/start-next-round are enforced; public
- * read-only league endpoints must remain open.
+ * Only the admin APIs are enforced; public read-only league data AND the now-open
+ * POST /api/league/start-next-round action must remain reachable by anyone.
+ * {@link LeagueService} is mocked so exercising start-next-round here verifies
+ * authorization only, without kicking off the real (threaded) round simulation.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,6 +36,9 @@ class AdminAuthorizationTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @MockitoBean
+    private LeagueService leagueService;
 
     private String bearer(String role) {
         return "Bearer " + jwtService.generateToken(1L, role);
@@ -60,35 +67,33 @@ class AdminAuthorizationTest {
                 .andExpect(status().isOk());
     }
 
-    // ---------- POST /api/league/start-next-round ----------
+    // ---------- POST /api/league/start-next-round (now public) ----------
 
     @Test
-    @DisplayName("POST /api/league/start-next-round without a token is rejected (401)")
+    @DisplayName("POST /api/league/start-next-round is public without a token (not 401/403)")
     void startRoundNoToken() throws Exception {
         mockMvc.perform(post("/api/league/start-next-round"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(result -> assertNotAuthBlocked(result.getResponse().getStatus()));
     }
 
     @Test
-    @DisplayName("POST /api/league/start-next-round with a USER token is forbidden (403)")
+    @DisplayName("POST /api/league/start-next-round is public with a USER token (not 401/403)")
     void startRoundUserToken() throws Exception {
         mockMvc.perform(post("/api/league/start-next-round").header(HttpHeaders.AUTHORIZATION, bearer("USER")))
-                .andExpect(status().isForbidden());
+                .andExpect(result -> assertNotAuthBlocked(result.getResponse().getStatus()));
     }
 
     @Test
-    @DisplayName("POST /api/league/start-next-round with an ADMIN token passes authorization (not 401/403)")
+    @DisplayName("POST /api/league/start-next-round is also reachable with an ADMIN token (not 401/403)")
     void startRoundAdminToken() throws Exception {
-        // With an empty H2 DB the service throws (no pending rounds) -> a 4xx/5xx
-        // business error, NOT an auth failure. Proving it is neither 401 nor 403
-        // is enough to show authorization was passed and the controller was reached.
         mockMvc.perform(post("/api/league/start-next-round").header(HttpHeaders.AUTHORIZATION, bearer("ADMIN")))
-                .andExpect(result -> {
-                    int sc = result.getResponse().getStatus();
-                    if (sc == 401 || sc == 403) {
-                        throw new AssertionError("expected to pass authorization but got " + sc);
-                    }
-                });
+                .andExpect(result -> assertNotAuthBlocked(result.getResponse().getStatus()));
+    }
+
+    private static void assertNotAuthBlocked(int status) {
+        if (status == 401 || status == 403) {
+            throw new AssertionError("start-next-round must be public, but got " + status);
+        }
     }
 
     // ---------- public endpoint still open ----------
