@@ -6,8 +6,10 @@ import org.example.footballleague.model.Team;
 import org.example.footballleague.repositories.MatchRepository;
 import org.example.footballleague.repositories.TeamRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -117,7 +119,14 @@ public class LeagueService {
     }
 
 
+    @Transactional
     public List<Match> startNextRound() {
+        // On a fresh database (e.g. production after deploy) there are no teams or
+        // matches yet. Bootstrap them on the first click so any user can simply
+        // press "start round" and have the league come to life, with no separate
+        // admin/seed step.
+        ensureLeagueInitialized();
+
         boolean roundAlreadyLive = !matchRepository.findByStatus(MatchStatus.LIVE).isEmpty();
         if (roundAlreadyLive) {
             throw new IllegalStateException("יש כבר מחזור שרץ כרגע");
@@ -135,5 +144,45 @@ public class LeagueService {
 
         simulationEngine.runNextRound(nextRoundMatches);
         return nextRoundMatches;
+    }
+
+    /**
+     * Ensures the league has teams and a full fixture list. Idempotent: returns
+     * immediately once a schedule exists, so repeated clicks never duplicate data.
+     */
+    private void ensureLeagueInitialized() {
+        if (matchRepository.count() > 0) {
+            return;
+        }
+
+        List<Team> teams = teamRepository.findAll();
+        if (teams.isEmpty()) {
+            teams = teamRepository.saveAll(createDefaultTeams());
+        }
+
+        generateLeagueSchedule(teams);
+    }
+
+    private List<Team> createDefaultTeams() {
+        return Arrays.asList(
+                createTeam("מכבי חיפה", 89),
+                createTeam("הפועל באר שבע", 91),
+                createTeam("מכבי תל אביב", 90),
+                createTeam("ביתר ירושלים", 92),
+                createTeam("הפועל פתח תקווה", 85),
+                createTeam("מכבי נתניה", 87),
+                createTeam("הפועל תל אביב", 85),
+                createTeam("עירוני קרית שמונה", 82)
+        );
+    }
+
+    private Team createTeam(String name, int skillLevel) {
+        Team team = new Team();
+        team.setName(name);
+        team.setSkillLevel(skillLevel);
+        team.setPoints(0);
+        team.setGoalsFor(0);
+        team.setGoalsAgainst(0);
+        return team;
     }
 }

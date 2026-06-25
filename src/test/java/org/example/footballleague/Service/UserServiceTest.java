@@ -361,7 +361,7 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("Valid PNG is accepted: saved URL/link point at /uploads/profile-images and user is saved")
+        @DisplayName("Valid PNG is accepted: saved URL/link are host-relative /uploads paths and user is saved")
         void validPng() {
             User u = user(7L, "USER");
             MultipartFile file = imageFile("image/png", 2048);
@@ -371,7 +371,8 @@ class UserServiceTest {
             userService.updateProfileImage(7L, file);
 
             String url = u.getProfileImageUrl();
-            assertTrue(url.matches("http://localhost:8080/uploads/profile-images/user-7-[0-9a-fA-F]+\\.png"),
+            // Host-relative path (no scheme/host) so it stays correct regardless of APP_BASE_URL.
+            assertTrue(url.matches("/uploads/profile-images/user-7-[0-9a-fA-F]+\\.png"),
                     "unexpected url: " + url);
             assertEquals(url, u.getProfileImageLink(), "image link must mirror the saved url");
             verify(userRepository).save(u);

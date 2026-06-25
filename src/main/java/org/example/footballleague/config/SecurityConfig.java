@@ -16,9 +16,10 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 /**
  * Phase 3A: begins enforcing real authorization, but ONLY on the highest-risk
- * endpoints — admin APIs and the operational "start next round" action — which
- * now require a JWT carrying role ADMIN. Everything else (auth, read-only league
- * data, bets, profiles, SSE) remains permitAll for now; those phases come later.
+ * endpoints — the admin APIs — which require a JWT carrying role ADMIN. The
+ * "start next round" action is intentionally open so any live-dashboard visitor
+ * can advance the league. Everything else (auth, read-only league data, bets,
+ * profiles, SSE) remains permitAll for now; those phases come later.
  *
  * Unauthenticated requests to a protected endpoint get 401 (via the entry point);
  * authenticated-but-wrong-role requests get 403 (default access-denied handling).
@@ -44,9 +45,11 @@ public class SecurityConfig {
                                 "/api/league/matches",
                                 "/api/league/table",
                                 "/api/league/matches/upcoming").permitAll()
-                        // Phase 3A enforced endpoints: admin APIs + operational league action.
+                        // Admin APIs stay ADMIN-only.
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/league/start-next-round").hasRole("ADMIN")
+                        // Starting the next round is an open operational action: any
+                        // visitor of the live dashboard may advance the league.
+                        .requestMatchers(HttpMethod.POST, "/api/league/start-next-round").permitAll()
                         // Phase 3B-2: bet endpoints require authentication; per-user
                         // ownership (or ADMIN) is enforced in the controller.
                         .requestMatchers("/api/bets/**").authenticated()

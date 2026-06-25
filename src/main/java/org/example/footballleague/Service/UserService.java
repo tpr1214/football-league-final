@@ -183,7 +183,11 @@ public class UserService {
             throw new IllegalStateException("העלאת התמונה נכשלה, אנא נסה שוב");
         }
 
-        String publicUrl = baseUrl + "/uploads/profile-images/" + fileName;
+        // Store a host-relative path rather than an absolute URL: the frontend
+        // resolves it against the API origin at render time. This keeps stored
+        // image links correct regardless of how APP_BASE_URL is configured (a
+        // common production misconfiguration that left images broken).
+        String publicUrl = "/uploads/profile-images/" + fileName;
         user.setProfileImageUrl(publicUrl);
         user.setProfileImageLink(publicUrl);
 
