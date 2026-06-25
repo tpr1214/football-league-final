@@ -47,9 +47,12 @@ public class SecurityConfig {
                                 "/api/league/matches/upcoming").permitAll()
                         // Admin APIs stay ADMIN-only.
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        // Starting the next round is an open operational action: any
-                        // visitor of the live dashboard may advance the league.
-                        .requestMatchers(HttpMethod.POST, "/api/league/start-next-round").permitAll()
+                        // Starting the next round and regenerating fixtures are open
+                        // operational actions: any visitor of the live dashboard may
+                        // advance the league or start a new cycle once a season ends.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/league/start-next-round",
+                                "/api/league/regenerate-rounds").permitAll()
                         // Phase 3B-2: bet endpoints require authentication; per-user
                         // ownership (or ADMIN) is enforced in the controller.
                         .requestMatchers("/api/bets/**").authenticated()

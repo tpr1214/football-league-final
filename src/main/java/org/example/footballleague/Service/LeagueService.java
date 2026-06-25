@@ -30,6 +30,15 @@ public class LeagueService {
 
 
     public List<Match> generateLeagueSchedule(List<Team> teams) {
+        return matchRepository.saveAll(buildRoundRobin(teams, 0));
+    }
+
+    /**
+     * Builds a single round-robin set of fixtures (unsaved). {@code roundOffset}
+     * shifts the round numbers so a fresh cycle can be appended after an existing
+     * season instead of clashing with already-played rounds.
+     */
+    private List<Match> buildRoundRobin(List<Team> teams, int roundOffset) {
         List<Team> rotationList = new ArrayList<>(teams);
         int totalTeams = rotationList.size();
 
@@ -50,7 +59,7 @@ public class LeagueService {
                 Match match = new Match();
                 match.setHomeTeam(home);
                 match.setAwayTeam(away);
-                match.setRoundNumber(round);
+                match.setRoundNumber(roundOffset + round);
                 match.setStatus(MatchStatus.PENDING);
                 match.setHomeScore(0);
                 match.setAwayScore(0);
@@ -67,7 +76,7 @@ public class LeagueService {
         }
 
 
-        return matchRepository.saveAll(allMatches);
+        return allMatches;
     }
 
 
@@ -144,6 +153,34 @@ public class LeagueService {
 
         simulationEngine.runNextRound(nextRoundMatches);
         return nextRoundMatches;
+    }
+
+    /**
+     * Starts a new cycle of fixtures once the current season is over. Appends a
+     * fresh round-robin after the last played round (keeping standings and bet
+     * history intact). Refuses to run while a round is live or any round is still
+     * pending, so it cannot create overlapping schedules.
+     */
+    @Transactional
+    public List<Match> regenerateSchedule() {
+        if (!matchRepository.findByStatus(MatchStatus.LIVE).isEmpty()) {
+            throw new IllegalStateException("יש מחזור שרץ כרגע, יש להמתין לסיומו לפני יצירת מחזורים חדשים");
+        }
+        if (!matchRepository.findByStatus(MatchStatus.PENDING).isEmpty()) {
+            throw new IllegalStateException("עדיין יש מחזורים שלא שוחקו. סיים אותם לפני יצירת מחזורים חדשים");
+        }
+
+        List<Team> teams = teamRepository.findAll();
+        if (teams.isEmpty()) {
+            teams = teamRepository.saveAll(createDefaultTeams());
+        }
+
+        int lastRound = matchRepository.findAll().stream()
+                .mapToInt(Match::getRoundNumber)
+                .max()
+                .orElse(0);
+
+        return matchRepository.saveAll(buildRoundRobin(teams, lastRound));
     }
 
     /**

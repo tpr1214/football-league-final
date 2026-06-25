@@ -299,6 +299,46 @@ class LeagueServiceTest {
         }
 
         @Test
+        @DisplayName("Appends a fresh round-robin after the last round when nothing is pending or live")
+        void regenerateAppendsNewRounds() {
+            when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of());
+            when(matchRepository.findByStatus(MatchStatus.PENDING)).thenReturn(List.of());
+            when(teamRepository.findAll()).thenReturn(teams(8));
+            when(matchRepository.findAll()).thenReturn(List.of(roundMatch(7))); // last played round = 7
+            when(matchRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+            List<Match> result = leagueService.regenerateSchedule();
+
+            assertEquals(28, result.size(), "8 teams -> 7 rounds * 4 matches");
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    result.stream().allMatch(m -> m.getRoundNumber() > 7),
+                    "new fixtures continue after the last played round");
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    result.stream().allMatch(m -> m.getStatus() == MatchStatus.PENDING));
+        }
+
+        @Test
+        @DisplayName("Refuses to regenerate while a round is still pending, and saves nothing")
+        void regenerateRejectsWhenPendingExists() {
+            when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of());
+            when(matchRepository.findByStatus(MatchStatus.PENDING)).thenReturn(List.of(roundMatch(3)));
+
+            assertThrows(IllegalStateException.class, () -> leagueService.regenerateSchedule());
+
+            verify(matchRepository, never()).saveAll(anyList());
+        }
+
+        @Test
+        @DisplayName("Refuses to regenerate while a round is live, and saves nothing")
+        void regenerateRejectsWhenLive() {
+            when(matchRepository.findByStatus(MatchStatus.LIVE)).thenReturn(List.of(roundMatch(2)));
+
+            assertThrows(IllegalStateException.class, () -> leagueService.regenerateSchedule());
+
+            verify(matchRepository, never()).saveAll(anyList());
+        }
+
+        @Test
         @DisplayName("Bootstraps teams and a fixture list on a fresh DB, then starts round one")
         void bootstrapsLeagueWhenDatabaseEmpty() {
             when(matchRepository.count()).thenReturn(0L);                 // empty DB -> bootstrap

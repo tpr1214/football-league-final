@@ -41,6 +41,11 @@ public class LeagueController {
         return ResponseEntity.ok(leagueService.startNextRound());
     }
 
+    @PostMapping("/regenerate-rounds")
+    public ResponseEntity<List<Match>> regenerateRounds() {
+        return ResponseEntity.ok(leagueService.regenerateSchedule());
+    }
+
     @GetMapping("/matches/upcoming")
     public ResponseEntity<List<MatchDashboardResponse>> getUpcomingMatches() {
 
